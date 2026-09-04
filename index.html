@@ -1509,7 +1509,7 @@ function showToast(msg){
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <!-- CONEXIÓN A TU PROYECTO -->
-<script>
+  <script>
   const supabase = supabase.createClient(
     "https://skmfifhwvrvmicutnxdyz.supabase.co",
     "sb_publishable__t5GNkwctglVkl3-v9qgMg_OV_1zg0Y"
@@ -1531,14 +1531,14 @@ function showToast(msg){
   }
 
   document.getElementById("publicarBtn").addEventListener("click", () => {
-  const sender = document.getElementById("sender").value;
-  const receiver = document.getElementById("receiver").value;
-  const amount = parseFloat(document.getElementById("amount").value);
-  const currency = document.getElementById("currency").value;
+    const sender = document.getElementById("sender").value;
+    const receiver = document.getElementById("receiver").value;
+    const amount = parseFloat(document.getElementById("amount").value);
+    const currency = document.getElementById("currency").value;
 
-  saveTransaction(sender, receiver, amount, currency);
-});
-<script>
+    saveTransaction(sender, receiver, amount, currency);
+  });
+</script>
   const supabase = supabase.createClient(
     "https://skmfifhwvrvmicutnxdyz.supabase.co",
     "sb_publishable__t5GNkwctglVkl3-v9qgMg_OV_1zg0Y"
