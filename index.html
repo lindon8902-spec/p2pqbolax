@@ -1514,24 +1514,29 @@ function showToast(msg){
     "https://skmfifhwvrvmicutnxdyz.supabase.co",
     "sb_publishable__t5GNkwctglVkl3-v9qgMg_OV_1zg0Y"
   );
-<script tasync function saveTransaction(sender, receiver, amount, currency) {
-  const { data, error } = await supabase
-    .from("p2p_transactions")
-    .insert([
-      {
-        sender: sender,
-        receiver: receiver,
-        amount: amount,
-        currency: currency
-      }
-    ]);
+<script>
+  const supabase = supabase.createClient(
+    "https://skmfifhwvrvmicutnxdyz.supabase.co",
+    "sb_publishable__t5GNkwctglVkl3-v9qgMg_OV_1zg0Y"
+  );
 
-  if (error) {
-    console.log(error);
-    showToast("Error guardando la transacción");
-  } else {
-    showToast("Transacción guardada correctamente");
+  async function saveTransaction(sender, receiver, amount, currency) {
+    const { data, error } = await supabase
+      .from("p2p_transactions")
+      .insert([
+        { sender, receiver, amount, currency }
+      ]);
+
+    if (error) {
+      console.log(error);
+      showToast("Error guardando la transacción");
+    } else {
+      showToast("Transacción guardada correctamente");
+    }
   }
-}>
+</script>
+
+</body>
+</html>
 </body>
 </html>
