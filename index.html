@@ -1515,6 +1515,24 @@ function showToast(msg){
     "sb_publishable__t5GNkwctglVkl3-v9qgMg_OV_1zg0Y"
   );
 </script>
-</script>
+</tasync function saveTransaction(sender, receiver, amount, currency) {
+  const { data, error } = await supabase
+    .from("p2p_transactions")
+    .insert([
+      {
+        sender: sender,
+        receiver: receiver,
+        amount: amount,
+        currency: currency
+      }
+    ]);
+
+  if (error) {
+    console.log(error);
+    showToast("Error guardando la transacción");
+  } else {
+    showToast("Transacción guardada correctamente");
+  }
+}>
 </body>
 </html>
