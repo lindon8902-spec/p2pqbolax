@@ -1514,6 +1514,30 @@ function showToast(msg){
     "https://skmfifhwvrvmicutnxdyz.supabase.co",
     "sb_publishable__t5GNkwctglVkl3-v9qgMg_OV_1zg0Y"
   );
+
+  async function saveTransaction(sender, receiver, amount, currency) {
+    const { data, error } = await supabase
+      .from("p2p_transactions")
+      .insert([
+        { sender, receiver, amount, currency }
+      ]);
+
+    if (error) {
+      console.log(error);
+      showToast("Error guardando la transacción");
+    } else {
+      showToast("Transacción guardada correctamente");
+    }
+  }
+
+  document.getElementById("publicarBtn").addEventListener("click", () => {
+    const sender = document.getElementById("sender").value;
+    const receiver = document.getElementById("receiver").value;
+    const amount = parseFloat(document.getElementById("amount").value);
+    const currency = document.getElementById("currency").value;
+
+    saveTransaction(sender, receiver, amount, currency);
+  });
 <script>
   const supabase = supabase.createClient(
     "https://skmfifhwvrvmicutnxdyz.supabase.co",
