@@ -1559,6 +1559,36 @@ function showToast(msg){
     }
   }
 </script>
+async function registerUser(email, password, name, country) {
+  const { data, error } = await supabase.auth.signUp({
+    email: email,
+    password: password
+  });
+
+  if (error) {
+    showToast("Error registrando usuario");
+    return;
+  }
+
+  await supabase.from("profiles").insert([
+    {
+      id: data.user.id,
+      name: name,
+      country: country
+    }
+  ]);
+
+  showToast("Cuenta creada correctamente");
+}
+
+document.getElementById("crearCuentaBtn").addEventListener("click", () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const name = document.getElementById("name").value;
+  const country = document.getElementById("country").value;
+
+  registerUser(email, password, name, country);
+});
 <body>
 
   <!-- FORMULARIO DE REGISTRO -->
