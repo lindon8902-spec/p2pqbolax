@@ -1531,13 +1531,13 @@ function showToast(msg){
   }
 
   document.getElementById("publicarBtn").addEventListener("click", () => {
-    const sender = document.getElementById("sender").value;
-    const receiver = document.getElementById("receiver").value;
-    const amount = parseFloat(document.getElementById("amount").value);
-    const currency = document.getElementById("currency").value;
+  const sender = document.getElementById("sender").value;
+  const receiver = document.getElementById("receiver").value;
+  const amount = parseFloat(document.getElementById("amount").value);
+  const currency = document.getElementById("currency").value;
 
-    saveTransaction(sender, receiver, amount, currency);
-  });
+  saveTransaction(sender, receiver, amount, currency);
+});
 <script>
   const supabase = supabase.createClient(
     "https://skmfifhwvrvmicutnxdyz.supabase.co",
