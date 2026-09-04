@@ -1505,6 +1505,16 @@ function showToast(msg){
   const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), 2600);
 }
+<!-- SUPABASE SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<!-- CONEXIÓN A TU PROYECTO -->
+<script>
+  const supabase = supabase.createClient(
+    "https://skmfifhwvrvmicutnxdyz.supabase.co",
+    "TU-ANON-KEY-AQUI"
+  );
+</script>
 </script>
 </body>
 </html>
