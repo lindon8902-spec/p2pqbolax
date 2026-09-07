@@ -1514,17 +1514,22 @@ async function handleRegister(){
   // NO avanzamos — de lo contrario la app actúa como si la cuenta existiera y al
   // recargar la página no hay nada que restaurar (por eso pedía registrarse otra vez).
   try{
+    // Cerramos cualquier sesión anterior guardada en el navegador — si no, signUp
+    // se puede enganchar a esa sesión vieja en vez de crear un usuario nuevo de verdad,
+    // y el perfil choca con el id de la cuenta anterior.
+    await supabaseClient.auth.signOut().catch(()=>{});
+
     const { data, error } = await supabaseClient.auth.signUp({
       email: contact.includes('@') ? contact : `${alias}@qbolax.local`,
       password: password
     });
     if(error) throw error;
 
-    const { error: profileError } = await supabaseClient.from('profiles').insert([{
+    const { error: profileError } = await supabaseClient.from('profiles').upsert([{
       id: data.user ? data.user.id : null,
       alias: alias,
       contact: contact
-    }]);
+    }], { onConflict: 'id' });
     if(profileError) throw profileError;
 
     contractAccepted = true;
