@@ -1194,7 +1194,10 @@ let telegramLinkCode = null;
 function switchAccTab(name){
   document.querySelectorAll('.acc-nav .tab').forEach(t=>t.classList.toggle('active', t.dataset.view===name));
   document.querySelectorAll('#page-cuenta .view').forEach(v=>v.classList.toggle('active', v.id==='acc-'+name));
-  if(name === 'accion') renderAccionGate();
+  if(name === 'accion'){
+    renderAccionGate();
+    refreshApprovalStatus().then(renderAccionGate);
+  }
   // El panel de Admin nunca se recuerda entre recargas — hay que volver a ingresar la clave por seguridad.
   if(name !== 'admin'){
     try{ localStorage.setItem('qbolax_last_tab', name); }catch(e){}
@@ -1271,6 +1274,36 @@ function acceptContractFromModal(){
   updateRegisterButton();
   closeContractModal();
   showToast('Términos aceptados');
+}
+
+async function refreshApprovalStatus(){
+  const alias = (document.getElementById('aliasInput') || {}).value;
+  if(!alias) return;
+
+  try{
+    const kycRes = await fetch(SUPABASE_FUNCTION_URL, {
+      method: 'POST', headers: {'Content-Type': 'text/plain'},
+      body: JSON.stringify({ action: 'check_kyc_status', alias })
+    });
+    const kycData = await kycRes.json();
+    if(kycData.ok && kycData.estado === 'aprobado'){
+      kycApproved = true;
+      document.getElementById('perfilSello').style.display = '';
+    }
+  }catch(e){ /* seguimos con lo que ya sabíamos si falla la consulta */ }
+
+  try{
+    const tgRes = await fetch(SUPABASE_FUNCTION_URL, {
+      method: 'POST', headers: {'Content-Type': 'text/plain'},
+      body: JSON.stringify({ action: 'check_alias_linked', alias })
+    });
+    const tgData = await tgRes.json();
+    if(tgData.ok && tgData.linked){
+      telegramLinked = true;
+      document.getElementById('telegramCardPending').style.display = 'none';
+      document.getElementById('telegramCardLinked').style.display = 'block';
+    }
+  }catch(e){ /* seguimos con lo que ya sabíamos si falla la consulta */ }
 }
 
 function renderAccionGate(){
