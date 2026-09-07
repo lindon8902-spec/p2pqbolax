@@ -1198,6 +1198,9 @@ function switchAccTab(name){
     renderAccionGate();
     refreshApprovalStatus().then(renderAccionGate);
   }
+  if(name === 'panel'){
+    loadPanelOrders();
+  }
   // El panel de Admin nunca se recuerda entre recargas — hay que volver a ingresar la clave por seguridad.
   if(name !== 'admin'){
     try{ localStorage.setItem('qbolax_last_tab', name); }catch(e){}
@@ -1398,6 +1401,41 @@ async function confirmTelegramLink(){
 const panelActiveOrders = [];
 const panelMyOffers = [];
 const panelHistory = [];
+
+async function loadPanelOrders(){
+  const alias = (document.getElementById('aliasInput') || {}).value;
+  if(!alias) { renderPanel(); return; }
+
+  try{
+    const { data, error } = await supabaseClient
+      .from('orders')
+      .select('*')
+      .or(`comprador.eq.@${alias},vendedor.eq.@${alias}`)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if(error) throw error;
+
+    panelActiveOrders.length = 0;
+    panelHistory.length = 0;
+    (data || []).forEach(o => {
+      const otro = o.comprador === '@'+alias ? o.vendedor : o.comprador;
+      if(o.status === 'pendiente_verificacion'){
+        panelActiveOrders.push({
+          id: o.order_code, otro, red: o.red, token: o.token, qty: o.qty,
+          estado: 'esperando_verificacion', label: 'Comprobante enviado — en revisión'
+        });
+      } else {
+        panelHistory.push({
+          id: o.order_code, otro, red: o.red, token: o.token, qty: o.qty,
+          resultado: o.status === 'completada' ? 'completada' : 'cancelada'
+        });
+      }
+    });
+  }catch(err){
+    console.log('No se pudieron cargar tus órdenes:', err);
+  }
+  renderPanel();
+}
 
 function renderPanel(){
   const activeEl = document.getElementById('panelActiveOrders');
