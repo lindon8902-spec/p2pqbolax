@@ -1173,6 +1173,8 @@ async function confirmOrderTransfer(){
   btn.disabled = true;
   btn.textContent = 'Enviando a la cola del operario...';
 
+  const myAlias = '@' + ((document.getElementById('aliasInput') || {}).value || 'usuario');
+
   const payload = {
     action: 'create_order',
     red: offer.red,
@@ -1182,8 +1184,9 @@ async function confirmOrderTransfer(){
     total: total,
     cur: offer.cur,
     side: side,
-    comprador: iAmBuying ? '@yo' : ('@' + offer.alias),
-    vendedor: iAmBuying ? ('@' + offer.alias) : '@yo',
+    comprador: iAmBuying ? myAlias : ('@' + offer.alias),
+    vendedor: iAmBuying ? ('@' + offer.alias) : myAlias,
+    actor: myAlias,
     ref_code: refCode,
     buyer_code: telegramLinkCode || '',
     receive_info: (document.getElementById('orderReceiveInput').value || '').trim(),
@@ -1454,6 +1457,16 @@ async function loadPanelOrders(){
         panelActiveOrders.push({
           id: o.order_code, otro, red: o.red, token: o.token, qty: o.qty,
           estado: 'esperando_verificacion', label: 'Comprobante enviado — en revisión'
+        });
+      } else if(o.status === 'verificado'){
+        // Al vendedor (quien recibió el pago verificado) le toca enviar la cripto
+        // al destino que dejó el comprador — se lo mostramos aquí directamente.
+        const destino = o.receive_info
+          ? `Envía a (${o.receive_type === 'wallet' ? 'wallet' : 'tarjeta'}): ${o.receive_info}`
+          : 'Pago verificado — revisa los detalles con el operario';
+        panelActiveOrders.push({
+          id: o.order_code, otro, red: o.red, token: o.token, qty: o.qty,
+          estado: 'esperando_pago', label: `Pago verificado — ${destino}`
         });
       } else {
         panelHistory.push({
