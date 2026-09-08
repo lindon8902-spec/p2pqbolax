@@ -701,6 +701,10 @@
       <div id="adminPanel">
         <button class="btn-outline" style="margin-bottom:14px; margin-top:0;" onclick="loadAllKyc()">↻ Actualizar lista</button>
         <div id="adminPendingList"></div>
+
+        <div class="panel-section-title" style="margin-top:30px;">Órdenes con comprobante por verificar</div>
+        <button class="btn-outline" style="margin-bottom:14px; margin-top:0;" onclick="loadPendingOrders()">↻ Actualizar órdenes</button>
+        <div id="adminOrdersList"></div>
       </div>
     </div>
   </div>
@@ -750,6 +754,15 @@
 
       <div class="order-step">
         <div class="order-step-num">3</div>
+        <div class="order-step-body">
+          <label style="margin-top:0;" id="orderReceiveLabel">Tu wallet para recibir</label>
+          <input type="text" id="orderReceiveInput" placeholder="ej. T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb" oninput="updateConfirmAvailability()">
+          <div class="hint" id="orderReceiveHint">Aquí te enviaremos tu pago una vez verificada la operación.</div>
+        </div>
+      </div>
+
+      <div class="order-step">
+        <div class="order-step-num">4</div>
         <div class="order-step-body">
           <label style="margin-top:0;">Captura de la transferencia realizada</label>
           <div id="orderProofBox" class="order-proof-box" onclick="document.getElementById('orderProofInput').click()">
@@ -1008,6 +1021,21 @@ function openOrderModal(idx){
     currentOrder.copyValue = ESCROW.wallets[o.red] || '';
   }
 
+  const receiveLabel = document.getElementById('orderReceiveLabel');
+  const receiveInput = document.getElementById('orderReceiveInput');
+  const receiveHint = document.getElementById('orderReceiveHint');
+  receiveInput.value = '';
+  currentOrder.receiveType = iAmBuying ? 'wallet' : 'tarjeta';
+  if(iAmBuying){
+    receiveLabel.textContent = `Tu wallet para recibir ${o.token} (${o.red})`;
+    receiveInput.placeholder = 'ej. T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb';
+    receiveHint.textContent = `Aquí te enviaremos tus ${o.token} una vez verificado tu pago.`;
+  } else {
+    receiveLabel.textContent = 'Número de tarjeta para recibir tu pago en CUP';
+    receiveInput.placeholder = 'ej. 9205 xxxx xxxx xxxx';
+    receiveHint.textContent = 'Aquí te transferiremos el CUP una vez verificada tu cripto.';
+  }
+
   const ref = 'Q-' + Math.floor(1000+Math.random()*9000);
   document.getElementById('orderRefCode').textContent = ref;
 
@@ -1071,7 +1099,8 @@ function updateConfirmAvailability(){
   const qty = parseFloat((document.getElementById('orderQty').value || '').replace(',', '.'));
   const hasQty = !isNaN(qty) && qty > 0;
   const hasProof = !!currentOrder.proofFile;
-  document.getElementById('orderConfirmBtn').disabled = !(hasQty && hasProof);
+  const hasReceive = !!(document.getElementById('orderReceiveInput').value || '').trim();
+  document.getElementById('orderConfirmBtn').disabled = !(hasQty && hasProof && hasReceive);
 }
 
 const FEE_RATE = 0.01; // 1% cobrado a cada parte
@@ -1157,6 +1186,8 @@ async function confirmOrderTransfer(){
     vendedor: iAmBuying ? ('@' + offer.alias) : '@yo',
     ref_code: refCode,
     buyer_code: telegramLinkCode || '',
+    receive_info: (document.getElementById('orderReceiveInput').value || '').trim(),
+    receive_type: currentOrder.receiveType,
   };
 
   try{
@@ -1690,6 +1721,7 @@ async function handleLogin(){
       goTo('cuenta');
       switchAccTab('admin');
       loadAllKyc();
+      loadPendingOrders();
       showToast('Acceso de administrador');
     }catch(err){
       errorEl.textContent = err.message;
@@ -2178,6 +2210,57 @@ async function rejectKyc(alias){
     loadAllKyc();
   }catch(err){
     showToast('No se pudo rechazar: ' + err.message);
+  }
+}
+
+async function loadPendingOrders(){
+  if(!adminKey) return;
+  try{
+    const res = await fetch(SUPABASE_FUNCTION_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain'},
+      body: JSON.stringify({ action: 'list_pending_orders', admin_key: adminKey })
+    });
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error);
+    renderPendingOrders(data.items);
+  }catch(err){
+    showToast('No se pudieron cargar las órdenes: ' + err.message);
+  }
+}
+
+function renderPendingOrders(items){
+  const el = document.getElementById('adminOrdersList');
+  if(!items || !items.length){
+    el.innerHTML = '<div class="panel-empty">No hay órdenes por verificar</div>';
+    return;
+  }
+  el.innerHTML = items.map(o => `
+    <div class="panel-item" style="align-items:flex-start; flex-direction:column; gap:8px;">
+      <div class="panel-item-left">
+        <div class="panel-item-title">${o.order_code} · ${o.qty} ${o.token} (${o.red})</div>
+        <div class="panel-item-sub">Comprador: ${o.comprador} · Vendedor: ${o.vendedor}</div>
+        <div class="panel-item-sub">Total: ${o.total} ${o.cur} · Ref: ${o.ref_code}</div>
+        ${o.receive_info ? `<div class="panel-item-sub"><b>Recibe en (${o.receive_type === 'wallet' ? 'wallet' : 'tarjeta'}):</b> ${o.receive_info}</div>` : ''}
+        <div class="panel-item-sub">enviado ${new Date(o.created_at).toLocaleString('es-CU')}</div>
+      </div>
+      <button class="cta buy" style="width:100%;" onclick="verifyOrder('${o.order_code}')">Verificar pago — avisar al vendedor</button>
+    </div>`).join('');
+}
+
+async function verifyOrder(orderCode){
+  try{
+    const res = await fetch(SUPABASE_FUNCTION_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain'},
+      body: JSON.stringify({ action: 'verify_order', admin_key: adminKey, order_code: orderCode })
+    });
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error);
+    showToast(`${orderCode} verificado — se avisó al vendedor`);
+    loadPendingOrders();
+  }catch(err){
+    showToast('No se pudo verificar: ' + err.message);
   }
 }
 
