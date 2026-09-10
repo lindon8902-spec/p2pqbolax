@@ -2257,7 +2257,10 @@ function renderPendingOrders(items){
         ${o.receive_info ? `<div class="panel-item-sub"><b>Recibe en (${o.receive_type === 'wallet' ? 'wallet' : 'tarjeta'}):</b> ${o.receive_info}</div>` : ''}
         <div class="panel-item-sub">enviado ${new Date(o.created_at).toLocaleString('es-CU')}</div>
       </div>
-      <button class="cta buy" style="width:100%;" onclick="verifyOrder('${o.order_code}')">Verificar pago — avisar al vendedor</button>
+      <div style="display:flex; gap:6px; width:100%;">
+        <button class="cta buy" style="flex:1;" onclick="verifyOrder('${o.order_code}')">Verificar pago</button>
+        <button class="cta sell" style="flex:1;" onclick="rejectOrder('${o.order_code}')">Denegar</button>
+      </div>
     </div>`).join('');
 }
 
@@ -2274,6 +2277,22 @@ async function verifyOrder(orderCode){
     loadPendingOrders();
   }catch(err){
     showToast('No se pudo verificar: ' + err.message);
+  }
+}
+
+async function rejectOrder(orderCode){
+  try{
+    const res = await fetch(SUPABASE_FUNCTION_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain'},
+      body: JSON.stringify({ action: 'reject_order', admin_key: adminKey, order_code: orderCode })
+    });
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error);
+    showToast(`${orderCode} denegada — se avisó a ambas partes`);
+    loadPendingOrders();
+  }catch(err){
+    showToast('No se pudo denegar: ' + err.message);
   }
 }
 
