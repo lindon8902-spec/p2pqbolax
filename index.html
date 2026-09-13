@@ -1254,9 +1254,12 @@ function updateOrderTotal(){
     const fmtC = n => n.toLocaleString('es-CU', {maximumFractionDigits:6});
     const cryptoFeeVar = qty * FEE_RATE;
     const cryptoFeeTotal = cryptoFeeVar + FEE_FIXED_VENDEDOR + FEE_RETIRO_VENDEDOR;
-    const cryptoNet = qty - cryptoFeeTotal;
+    // El vendedor paga su comisión ENCIMA de lo que ya debe (igual que el comprador) —
+    // no se le descuenta del monto de la orden. Tú recibes el monto completo (qty);
+    // lo que el vendedor tiene que salir de su bolsillo es qty + sus comisiones.
+    const vendorMustSend = qty + cryptoFeeTotal;
     currentOrder.total = total;
-    currentOrder.cryptoNet = cryptoNet;
+    currentOrder.cryptoNet = qty;
     document.getElementById('orderTotalFiat').textContent = `${fmt(total)} ${offer.cur}`;
     breakdownEl.innerHTML = `
       <div class="fee-row"><span>${qty} ${offer.token} × ${price} ${offer.cur}</span><span>${fmt(subtotal)} ${offer.cur}</span></div>
@@ -1264,23 +1267,22 @@ function updateOrderTotal(){
       <div class="fee-row"><span>Comisión fija por operación</span><span>+ ${fmt(FEE_FIXED_COMPRADOR)} ${offer.cur}</span></div>
       <div class="fee-row"><span>Comisión de retiro</span><span>+ ${fmt(FEE_RETIRO_COMPRADOR)} ${offer.cur}</span></div>
       <div class="fee-row total"><span>Total a transferir</span><span>${fmt(total)} ${offer.cur}</span></div>
-      <div class="fee-row" style="border-top:1px solid var(--line); margin-top:6px; padding-top:8px;"><span>Cripto que ordenas</span><span>${qty} ${offer.token}</span></div>
-      <div class="fee-row"><span>Comisiones del vendedor (variable + fija + retiro)</span><span>− ${fmtC(cryptoFeeTotal)} ${offer.token}</span></div>
-      <div class="fee-row total"><span>Recibirás</span><span>${fmtC(cryptoNet)} ${offer.token}</span></div>`;
+      <div class="fee-row" style="border-top:1px solid var(--line); margin-top:6px; padding-top:8px;"><span>Recibirás</span><span>${qty} ${offer.token}</span></div>
+      <div class="fee-row" style="color:var(--faint);"><span>El vendedor debe enviar en total (con sus comisiones)</span><span>${fmtC(vendorMustSend)} ${offer.token}</span></div>`;
   } else {
     const fmtC = n => n.toLocaleString('es-CU', {maximumFractionDigits:6});
     const cryptoFeeVar = qty * FEE_RATE;
     const cryptoFeeTotal = cryptoFeeVar + FEE_FIXED_VENDEDOR + FEE_RETIRO_VENDEDOR;
-    const cryptoNet = qty - cryptoFeeTotal;
+    const cryptoToSend = qty + cryptoFeeTotal;
     const gross = qty * price;
-    currentOrder.total = cryptoNet;
-    document.getElementById('orderTotalFiat').textContent = `${fmtC(cryptoNet)} ${offer.token}`;
+    currentOrder.total = cryptoToSend;
+    document.getElementById('orderTotalFiat').textContent = `${fmtC(cryptoToSend)} ${offer.token}`;
     breakdownEl.innerHTML = `
       <div class="fee-row"><span>${qty} ${offer.token} solicitados</span><span></span></div>
-      <div class="fee-row"><span>Tu comisión variable (1%, en ${offer.token})</span><span>− ${fmtC(cryptoFeeVar)} ${offer.token}</span></div>
-      <div class="fee-row"><span>Comisión fija por operación</span><span>− ${fmtC(FEE_FIXED_VENDEDOR)} ${offer.token}</span></div>
-      <div class="fee-row"><span>Comisión de retiro</span><span>− ${fmtC(FEE_RETIRO_VENDEDOR)} ${offer.token}</span></div>
-      <div class="fee-row total"><span>Cripto a enviar</span><span>${fmtC(cryptoNet)} ${offer.token}</span></div>
+      <div class="fee-row"><span>Tu comisión variable (1%, en ${offer.token})</span><span>+ ${fmtC(cryptoFeeVar)} ${offer.token}</span></div>
+      <div class="fee-row"><span>Comisión fija por operación</span><span>+ ${fmtC(FEE_FIXED_VENDEDOR)} ${offer.token}</span></div>
+      <div class="fee-row"><span>Comisión de retiro</span><span>+ ${fmtC(FEE_RETIRO_VENDEDOR)} ${offer.token}</span></div>
+      <div class="fee-row total"><span>Cripto a enviar (incluye tus comisiones)</span><span>${fmtC(cryptoToSend)} ${offer.token}</span></div>
       <div class="fee-row" style="border-top:1px solid var(--line); margin-top:6px; padding-top:8px;"><span>El comprador te transferirá (más sus propias comisiones)</span><span>${fmt(gross)} ${offer.cur}</span></div>`;
   }
   updateConfirmAvailability();
@@ -1695,9 +1697,9 @@ function openTransferModal(idx){
     const qtyNum = parseNum(o.qty);
     const feeVar = qtyNum * FEE_RATE;
     const feeTotal = feeVar + FEE_FIXED_VENDEDOR + FEE_RETIRO_VENDEDOR;
-    const net = qtyNum - feeTotal;
+    const total = qtyNum + feeTotal;
     const fmtC = n => n.toLocaleString('es-CU', {maximumFractionDigits:6});
-    return `Cantidad a enviar: ${fmtC(net)} ${o.token} (${o.red}) — de los ${o.qty} ${o.token} de la orden, ya descontamos tu 1% variable + ${FEE_FIXED_VENDEDOR} fija + ${FEE_RETIRO_VENDEDOR} de retiro (total: ${fmtC(feeTotal)} ${o.token})`;
+    return `Cantidad a enviar: ${fmtC(total)} ${o.token} (${o.red}) — son los ${o.qty} ${o.token} de la orden más tu comisión (1% variable + ${FEE_FIXED_VENDEDOR} fija + ${FEE_RETIRO_VENDEDOR} de retiro = ${fmtC(feeTotal)} ${o.token} extra)`;
   })();
   document.getElementById('transferPaidHint').textContent = o.total
     ? `El comprador pagó: ${o.total} ${o.cur || 'CUP'} (incluye su comisión variable 1% + fija ${FEE_FIXED_COMPRADOR} + retiro ${FEE_RETIRO_COMPRADOR} CUP) — esto no afecta lo que tú envías`
