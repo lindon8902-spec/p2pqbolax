@@ -785,6 +785,32 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="transferModalOverlay">
+  <div class="modal" style="max-width:420px; text-align:left; padding:0;">
+    <div style="padding:20px 22px 4px; display:flex; justify-content:space-between; align-items:center;">
+      <div style="font-family:'Fraunces',serif; font-weight:600; font-size:18px;">Enviar cripto</div>
+      <button onclick="closeTransferModal()" style="background:none; border:none; font-size:18px; color:var(--faint); cursor:pointer;">✕</button>
+    </div>
+    <div style="padding:6px 22px 22px;">
+      <p class="sub" id="transferModalSub" style="margin-bottom:16px;">El comprador ya transfirió y el operario lo verificó. Envía la cripto a la dirección de abajo.</p>
+
+      <div style="background:var(--paper); border-radius:9px; padding:14px; margin-bottom:6px;">
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--faint); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;" id="transferDestLabel">Enviar a</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+          <div id="transferDestValue" style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; word-break:break-all;">—</div>
+          <button onclick="copyTransferDest()" style="flex:none; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; padding:7px 11px; border-radius:6px; border:1px solid var(--line); background:#fff; color:var(--dim); cursor:pointer; white-space:nowrap;" id="copyTransferBtn">Copiar</button>
+        </div>
+      </div>
+      <div class="hint" id="transferQtyHint" style="margin-bottom:16px;">Cantidad a enviar: —</div>
+
+      <div class="notice" style="margin-bottom:0;">Confirma solo después de haber hecho la transferencia — esto avisa al operario para que libere la orden.</div>
+
+      <button class="btn btn-primary btn-full" id="transferConfirmBtn" onclick="confirmVendorTransfer()">Ya envié la cripto</button>
+      <button class="btn-outline" onclick="closeTransferModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="loginModalOverlay">
   <div class="modal" style="max-width:380px; text-align:left; padding:0;">
     <div style="padding:20px 22px 4px; display:flex; justify-content:space-between; align-items:center;">
@@ -1543,14 +1569,23 @@ async function loadPanelOrders(){
           estado: 'esperando_verificacion', label: 'Comprobante enviado — en revisión'
         });
       } else if(o.status === 'verificado'){
-        // Al vendedor (quien recibió el pago verificado) le toca enviar la cripto
-        // al destino que dejó el comprador — se lo mostramos aquí directamente.
-        const destino = o.receive_info
-          ? `Envía a (${o.receive_type === 'wallet' ? 'wallet' : 'tarjeta'}): ${o.receive_info}`
-          : 'Pago verificado — revisa los detalles con el operario';
+        // Al vendedor (quien recibió el pago verificado) le toca enviar la cripto.
+        // Antes solo se mostraba el texto con la dirección — ahora se abre un modal
+        // con un botón real para confirmar el envío (acción vendor_confirm_transfer,
+        // que ya existía en el backend pero nunca se llamaba desde aquí).
+        const esVendedor = o.vendedor === '@'+alias;
+        const label = esVendedor
+          ? 'Pago verificado — toca para ver la dirección y confirmar tu envío'
+          : 'Pago verificado — esperando que el vendedor envíe la cripto';
         panelActiveOrders.push({
           id: o.order_code, otro, red: o.red, token: o.token, qty: o.qty,
-          estado: 'esperando_pago', label: `Pago verificado — ${destino}`
+          receive_info: o.receive_info, receive_type: o.receive_type,
+          estado: 'esperando_pago', esVendedor, label
+        });
+      } else if(o.status === 'pendiente_liberacion'){
+        panelActiveOrders.push({
+          id: o.order_code, otro, red: o.red, token: o.token, qty: o.qty,
+          estado: 'esperando_liberacion', label: 'Cripto enviada — esperando que el operario libere la orden'
         });
       } else {
         panelHistory.push({
@@ -1567,9 +1602,19 @@ async function loadPanelOrders(){
 
 function renderPanel(){
   const activeEl = document.getElementById('panelActiveOrders');
-  activeEl.innerHTML = panelActiveOrders.length ? panelActiveOrders.map(o=>{
-    const badge = o.estado==='esperando_verificacion' ? '<span class="panel-item-badge badge-wait">en revisión</span>' : '<span class="panel-item-badge badge-live">acción tuya</span>';
-    return `<div class="panel-item">
+  activeEl.innerHTML = panelActiveOrders.length ? panelActiveOrders.map((o, idx)=>{
+    let badge, clickAttr = '';
+    if(o.estado === 'esperando_verificacion'){
+      badge = '<span class="panel-item-badge badge-wait">en revisión</span>';
+    } else if(o.estado === 'esperando_liberacion'){
+      badge = '<span class="panel-item-badge badge-wait">enviada</span>';
+    } else if(o.estado === 'esperando_pago' && o.esVendedor){
+      badge = '<span class="panel-item-badge badge-live">enviar cripto</span>';
+      clickAttr = ` style="cursor:pointer;" onclick="openTransferModal(${idx})"`;
+    } else {
+      badge = '<span class="panel-item-badge badge-wait">esperando</span>';
+    }
+    return `<div class="panel-item"${clickAttr}>
       <div class="panel-item-left"><div class="panel-item-title">${esc(o.id)} · ${esc(o.qty)} ${esc(o.token)} · ${esc(o.red)}</div><div class="panel-item-sub">con ${esc(o.otro)} — ${esc(o.label)}</div></div>
       ${badge}
     </div>`;
@@ -1592,6 +1637,65 @@ function renderPanel(){
   }).join('') : '<div class="panel-empty">Aún no tienes operaciones</div>';
 }
 renderPanel();
+
+/* ===== MODAL: el vendedor envía la cripto tras el pago verificado ===== */
+let currentTransferOrder = null;
+function openTransferModal(idx){
+  const o = panelActiveOrders[idx];
+  if(!o || o.estado !== 'esperando_pago' || !o.esVendedor) return;
+  currentTransferOrder = o;
+
+  const destLabel = document.getElementById('transferDestLabel');
+  const destValue = document.getElementById('transferDestValue');
+  if(o.receive_info){
+    destLabel.textContent = o.receive_type === 'wallet' ? `Wallet del comprador (${o.red})` : 'Tarjeta del comprador (CUP)';
+    destValue.textContent = o.receive_info;
+  } else {
+    destLabel.textContent = 'Destino';
+    destValue.textContent = 'No se registró destino — consulta con el operario antes de enviar';
+  }
+  document.getElementById('transferQtyHint').textContent = `Cantidad a enviar: ${o.qty} ${o.token} (${o.red})`;
+  const btn = document.getElementById('transferConfirmBtn');
+  btn.disabled = false;
+  btn.textContent = 'Ya envié la cripto';
+  document.getElementById('transferModalOverlay').classList.add('open');
+}
+function closeTransferModal(){
+  document.getElementById('transferModalOverlay').classList.remove('open');
+  currentTransferOrder = null;
+}
+function copyTransferDest(){
+  if(!currentTransferOrder || !currentTransferOrder.receive_info) return;
+  const btn = document.getElementById('copyTransferBtn');
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(currentTransferOrder.receive_info).then(()=>{
+      btn.textContent = '✓ Copiado';
+      setTimeout(()=>{ btn.textContent = 'Copiar'; }, 1800);
+    }).catch(()=> showToast('No se pudo copiar'));
+  }
+}
+async function confirmVendorTransfer(){
+  if(!currentTransferOrder) return;
+  const btn = document.getElementById('transferConfirmBtn');
+  btn.disabled = true;
+  btn.textContent = 'Enviando confirmación...';
+  try{
+    const res = await fetch(SUPABASE_FUNCTION_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain'},
+      body: JSON.stringify({ action: 'vendor_confirm_transfer', order_code: currentTransferOrder.id })
+    });
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error || 'El servidor rechazó la confirmación');
+    showToast(`Confirmado — el operario revisará y liberará ${currentTransferOrder.id}`);
+    closeTransferModal();
+    loadPanelOrders();
+  }catch(err){
+    btn.disabled = false;
+    btn.textContent = 'Ya envié la cripto';
+    showToast('No se pudo confirmar: ' + err.message);
+  }
+}
 
 /* ===== TELEGRAM / SUPABASE EDGE FUNCTION ===== */
 // Reemplaza TU_PROJECT_REF por el ref de tu proyecto (lo mismo que usas en supabaseClient).
