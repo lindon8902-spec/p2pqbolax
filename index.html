@@ -824,6 +824,9 @@ function goTo(page){
 /* ===== Utilidades: escape + parsing seguro ===== */
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function jsq(s){ return String(s ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+// Normaliza cualquier alias a minúsculas antes de guardarlo o compararlo — evita que
+// "@Yo", "@yo" y "@YO" se traten como personas distintas en la base de datos.
+function normAlias(a){ return String(a ?? '').trim().toLowerCase(); }
 function parseNum(v){
   let s = String(v ?? '').trim().replace(/\s/g,'');
   if(!s) return NaN;
@@ -983,7 +986,7 @@ loadMarketOffers();
 /* ===== PANEL: mis propias ofertas publicadas (antes nunca se llenaba) ===== */
 const panelMyOffersList = [];
 async function loadMyOffers(){
-  const alias = (document.getElementById('aliasInput') || {}).value;
+  const alias = normAlias((document.getElementById('aliasInput') || {}).value);
   panelMyOffersList.length = 0;
   if(!alias){ renderPanel(); return; }
   try{
@@ -1244,7 +1247,7 @@ async function confirmOrderTransfer(){
   btn.disabled = true;
   btn.textContent = 'Enviando a la cola del operario...';
 
-  const myAlias = '@' + ((document.getElementById('aliasInput') || {}).value || 'usuario');
+  const myAlias = '@' + (normAlias((document.getElementById('aliasInput') || {}).value) || 'usuario');
 
   const payload = {
     action: 'create_order',
@@ -1393,7 +1396,7 @@ function acceptContractFromModal(){
 }
 
 async function refreshApprovalStatus(){
-  const alias = (document.getElementById('aliasInput') || {}).value;
+  const alias = normAlias((document.getElementById('aliasInput') || {}).value);
   if(!alias) return;
 
   try{
@@ -1452,7 +1455,7 @@ function renderAccionGate(){
 
 async function openTelegramLink(){
   telegramLinkCode = 'Q' + Math.random().toString(36).slice(2, 8).toUpperCase();
-  const alias = (document.getElementById('aliasInput') || {}).value || 'usuario';
+  const alias = normAlias((document.getElementById('aliasInput') || {}).value) || 'usuario';
 
   try{
     await fetch(SUPABASE_FUNCTION_URL, {
@@ -1518,7 +1521,7 @@ const panelActiveOrders = [];
 const panelHistory = [];
 
 async function loadPanelOrders(){
-  const alias = (document.getElementById('aliasInput') || {}).value;
+  const alias = normAlias((document.getElementById('aliasInput') || {}).value);
   if(!alias) { renderPanel(); return; }
 
   try{
@@ -1680,7 +1683,7 @@ async function restoreSession(){
       .maybeSingle();
 
     if(profile && profile.alias){
-      const alias = profile.alias;
+      const alias = normAlias(profile.alias);
       document.getElementById('aliasInput').value = alias;
       if(profile.contact) document.getElementById('contactInput').value = profile.contact;
       document.getElementById('aliasDisplay').textContent = '@' + alias;
@@ -1750,7 +1753,7 @@ async function saveTransaction(sender, receiver, amount, currency){
 /* Registro de cuenta: usa el flujo real de acc-registro (alias/contacto/contraseña),
    no el formulario de email/nombre/país que estaba duplicado y desconectado del resto de la app. */
 async function handleRegister(){
-  const alias = (document.getElementById('aliasInput').value || '').trim();
+  const alias = normAlias(document.getElementById('aliasInput').value);
   const contact = (document.getElementById('contactInput').value || '').trim();
   const password = (document.getElementById('passwordInput').value || '').trim();
   const errorEl = document.getElementById('registerError');
@@ -1909,17 +1912,19 @@ async function handleLogin(){
     // Si no escribió un correo, lo tratamos como alias y buscamos su perfil
     // para reconstruir el correo con el que se registró (real o el interno @qbolax.local).
     if(!identifier.includes('@')){
+      const idNorm = normAlias(identifier);
       const { data: profile } = await supabaseClient
         .from('profiles')
         .select('alias, contact')
-        .eq('alias', identifier)
+        .eq('alias', idNorm)
         .maybeSingle();
 
       if(profile && profile.contact){
-        email = profile.contact.includes('@') ? profile.contact : `${profile.alias}@qbolax.local`;
-        alias = profile.alias;
+        alias = normAlias(profile.alias);
+        email = profile.contact.includes('@') ? profile.contact : `${alias}@qbolax.local`;
       } else {
-        email = `${identifier}@qbolax.local`;
+        alias = idNorm;
+        email = `${idNorm}@qbolax.local`;
       }
     }
 
@@ -2154,7 +2159,7 @@ async function submitKyc(){
   const submitBtn = document.getElementById('kycSubmitBtn');
   banner.style.background = ''; banner.style.color = '';
 
-  const alias = (document.getElementById('aliasInput') || {}).value || 'usuario';
+  const alias = normAlias((document.getElementById('aliasInput') || {}).value) || 'usuario';
   const contact = (document.getElementById('contactInput') || {}).value || 'sin contacto registrado';
   const fullName = (document.getElementById('kycFullNameInput').value || '').trim();
   const age = (document.getElementById('kycAgeInput').value || '').trim();
@@ -2261,14 +2266,17 @@ async function pollKycStatus(alias){
 }
 
 document.getElementById('aliasInput').addEventListener('input', e=>{
-  const v = e.target.value.trim() || 'usuario';
+  // Forzamos minúsculas mientras se escribe — así el alias que se muestra es siempre
+  // el mismo que se va a guardar y comparar en la base de datos.
+  const v = normAlias(e.target.value) || 'usuario';
+  e.target.value = v;
   document.getElementById('aliasDisplay').textContent = '@'+v;
   document.getElementById('panelAlias').textContent = '@'+v;
   document.getElementById('panelAvatar').textContent = v[0].toUpperCase();
   document.getElementById('perfilAvatar').textContent = v[0].toUpperCase();
 });
 async function publishOffer(){
-  const alias = (document.getElementById('aliasInput') || {}).value || 'usuario';
+  const alias = normAlias((document.getElementById('aliasInput') || {}).value) || 'usuario';
   const red = document.getElementById('redSelect').value;
   const token = document.getElementById('tokenSelect').value;
   const qty = (document.getElementById('sellQtyInput').value || '').trim();
