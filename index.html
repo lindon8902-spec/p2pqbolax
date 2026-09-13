@@ -489,34 +489,33 @@
           <button onclick="closeContractModal()" style="background:none; border:none; font-size:18px; color:var(--faint); cursor:pointer;">✕</button>
         </div>
         <div style="padding:20px 22px; font-size:12.5px; color:var(--dim); line-height:1.7;">
-          <div class="notice" style="margin-bottom:16px;"><b>Plantilla en revisión:</b> este contrato está basado en el marco legal cubano (Código Civil, Ley 149/2022 de Protección de Datos, Resolución 215/2021 del BCC sobre activos virtuales), pero aún requiere validación de un abogado antes de considerarse definitivo.</div>
+          <p style="font-weight:600; color:var(--ink); margin-bottom:14px;">Antes de realizar cualquier operación en esta plataforma, usted declara que ha leído, entendido y aceptado las siguientes condiciones:</p>
 
-          <p style="font-weight:600; color:var(--ink); margin-bottom:6px;">1. Objeto</p>
-          <p style="margin-bottom:14px;">Q'bolax P2P facilita el contacto entre compradores y vendedores de activos virtuales a cambio de CUP, actuando como custodio temporal de los fondos. La Plataforma no es parte de la operación comercial entre los Usuarios.</p>
+          <p style="font-weight:600; color:var(--ink); margin-bottom:6px;">1. Naturaleza del servicio</p>
+          <p style="margin-bottom:14px;">La plataforma actúa como intermediario técnico con custodia temporal (escrow) de fondos.</p>
 
-          <p style="font-weight:600; color:var(--ink); margin-bottom:6px;">2. Requisitos de acceso</p>
-          <p style="margin-bottom:14px;">Ser mayor de 18 años, completar verificación de identidad (KYC), vincular una vía de notificación activa, y aceptar este contrato.</p>
+          <p style="font-weight:600; color:var(--ink); margin-bottom:6px;">2. Custodia de fondos</p>
+          <p style="margin-bottom:14px;">Los fondos enviados a las cuentas de la página quedan bajo custodia hasta verificación y liberación.</p>
 
-          <p style="font-weight:600; color:var(--ink); margin-bottom:6px;">3. Rol de custodio</p>
-          <p style="margin-bottom:14px;">La Plataforma retiene temporalmente el CUP del comprador y el activo virtual del vendedor, liberándolos solo cuando se cumplen las condiciones pactadas. No garantiza cotización ni liquidez de ningún activo.</p>
+          <p style="font-weight:600; color:var(--ink); margin-bottom:6px;">3. Verificación de transacciones</p>
+          <p style="margin-bottom:14px;">Solo se consideran válidas las transferencias confirmadas en la red correcta y a las direcciones indicadas.</p>
 
-          <p style="font-weight:600; color:var(--ink); margin-bottom:6px;">4. Obligaciones del usuario</p>
-          <p style="margin-bottom:14px;">Proporcionar información veraz, usar la plataforma para fines lícitos, no suplantar identidades, y no intentar evadir la comisión completando operaciones fuera de la plataforma.</p>
+          <p style="font-weight:600; color:var(--ink); margin-bottom:6px;">4. Comisiones</p>
+          <p style="margin-bottom:14px;">Cada operación incluye comisiones variables y fijas, mostradas antes de confirmar y no reembolsables tras la confirmación.</p>
 
-          <p style="font-weight:600; color:var(--ink); margin-bottom:6px;">5. Comisión</p>
-          <p style="margin-bottom:14px;">1% del monto de cada orden completada, a cargo de comprador y vendedor por separado, mostrado siempre de forma desglosada antes de confirmar.</p>
+          <p style="font-weight:600; color:var(--ink); margin-bottom:6px;">5. Riesgos</p>
+          <p style="margin-bottom:14px;">Las transacciones en criptomonedas son irreversibles y están sujetas a riesgos de mercado, tecnológicos y regulatorios.</p>
 
-          <p style="font-weight:600; color:var(--ink); margin-bottom:6px;">6. Resolución de disputas</p>
-          <p style="margin-bottom:14px;">Reporte dentro de 24h con evidencia. La Plataforma resuelve según la evidencia disponible. Agotada esa vía, aplica la jurisdicción de los tribunales de la República de Cuba.</p>
+          <p style="font-weight:600; color:var(--ink); margin-bottom:6px;">6. Seguridad y comportamiento</p>
+          <p style="margin-bottom:14px;">El usuario se compromete a no usar la plataforma para actividades ilícitas y a proteger sus credenciales.</p>
 
-          <p style="font-weight:600; color:var(--ink); margin-bottom:6px;">7. Protección de datos</p>
-          <p style="margin-bottom:14px;">Tus documentos de KYC se tratan conforme a la Ley 149/2022. Son confidenciales, nunca se comparten con la contraparte, y solo se usan para verificación de identidad.</p>
+          <p style="font-weight:600; color:var(--ink); margin-bottom:6px;">7. Disputas</p>
+          <p style="margin-bottom:14px;">La plataforma podrá solicitar evidencia adicional y tomar decisiones sobre liberación o devolución de fondos.</p>
 
-          <p style="font-weight:600; color:var(--ink); margin-bottom:6px;">8. Limitación de responsabilidad</p>
-          <p style="margin-bottom:14px;">La Plataforma no responde por fluctuaciones de valor de los activos, errores del usuario al ingresar datos, ni fallos de terceros (bancos, redes blockchain, internet).</p>
+          <p style="font-weight:600; color:var(--ink); margin-bottom:6px;">8. Modificaciones</p>
+          <p style="margin-bottom:14px;">Las condiciones pueden ser actualizadas y deberán ser aceptadas nuevamente para seguir usando el servicio.</p>
 
-          <p style="font-weight:600; color:var(--ink); margin-bottom:6px;">9. Legislación aplicable</p>
-          <p style="margin-bottom:0;">Este contrato se rige por las leyes de la República de Cuba.</p>
+          <p style="margin-bottom:0;">Al hacer clic en "Acepto", usted declara que ha leído este contrato, comprende los riesgos y acepta utilizar la plataforma bajo estas reglas.</p>
         </div>
         <div style="padding:16px 22px; border-top:1px solid var(--line); position:sticky; bottom:0; background:var(--card);">
           <button class="btn btn-primary btn-full" style="margin-top:0;" onclick="acceptContractFromModal()">Acepto los Términos y Condiciones</button>
@@ -1210,7 +1209,16 @@ function updateConfirmAvailability(){
   document.getElementById('orderConfirmBtn').disabled = !(hasQty && hasProof && hasReceive);
 }
 
-const FEE_RATE = 0.01; // 1% cobrado a cada parte
+const FEE_RATE = 0.01; // comisión variable: 1%, cada quien la paga en su propia moneda
+// Comisiones oficiales de la plataforma (además de la variable de arriba):
+const FEE_FIXED_VENDEDOR = 0.10;  // fijo por operación, en la cripto de la orden (USDT u equivalente)
+const FEE_FIXED_COMPRADOR = 100;  // fijo por operación, en CUP
+const FEE_RETIRO_VENDEDOR = 0.50; // retiro, en la cripto de la orden (USDT u equivalente)
+const FEE_RETIRO_COMPRADOR = 500; // retiro, en CUP
+// Nota: los montos fijos y de retiro están definidos oficialmente en USDT/CUP. Como esta
+// plataforma también opera BTC/ETH/TON, aquí se aplican como el mismo número en la unidad
+// del token de la orden (ej. 0.10 BTC) — probablemente no es lo que se quiere para redes
+// distintas a TRON/USDT. Avisa si hace falta una tabla de equivalencias por red.
 
 function updateOrderTotal(){
   if(!currentOrder) return;
@@ -1241,33 +1249,39 @@ function updateOrderTotal(){
 
   if(iAmBuying){
     const subtotal = qty * price;
-    const fee = subtotal * FEE_RATE;
-    const total = subtotal + fee;
+    const feeVar = subtotal * FEE_RATE;
+    const total = subtotal + feeVar + FEE_FIXED_COMPRADOR + FEE_RETIRO_COMPRADOR;
     const fmtC = n => n.toLocaleString('es-CU', {maximumFractionDigits:6});
-    const cryptoFee = qty * FEE_RATE;
-    const cryptoNet = qty - cryptoFee;
+    const cryptoFeeVar = qty * FEE_RATE;
+    const cryptoFeeTotal = cryptoFeeVar + FEE_FIXED_VENDEDOR + FEE_RETIRO_VENDEDOR;
+    const cryptoNet = qty - cryptoFeeTotal;
     currentOrder.total = total;
     currentOrder.cryptoNet = cryptoNet;
     document.getElementById('orderTotalFiat').textContent = `${fmt(total)} ${offer.cur}`;
     breakdownEl.innerHTML = `
       <div class="fee-row"><span>${qty} ${offer.token} × ${price} ${offer.cur}</span><span>${fmt(subtotal)} ${offer.cur}</span></div>
-      <div class="fee-row"><span>Tu comisión (1%, en ${offer.cur})</span><span>+ ${fmt(fee)} ${offer.cur}</span></div>
+      <div class="fee-row"><span>Tu comisión variable (1%, en ${offer.cur})</span><span>+ ${fmt(feeVar)} ${offer.cur}</span></div>
+      <div class="fee-row"><span>Comisión fija por operación</span><span>+ ${fmt(FEE_FIXED_COMPRADOR)} ${offer.cur}</span></div>
+      <div class="fee-row"><span>Comisión de retiro</span><span>+ ${fmt(FEE_RETIRO_COMPRADOR)} ${offer.cur}</span></div>
       <div class="fee-row total"><span>Total a transferir</span><span>${fmt(total)} ${offer.cur}</span></div>
       <div class="fee-row" style="border-top:1px solid var(--line); margin-top:6px; padding-top:8px;"><span>Cripto que ordenas</span><span>${qty} ${offer.token}</span></div>
-      <div class="fee-row"><span>Comisión del vendedor (1%, en ${offer.token})</span><span>− ${fmtC(cryptoFee)} ${offer.token}</span></div>
+      <div class="fee-row"><span>Comisiones del vendedor (variable + fija + retiro)</span><span>− ${fmtC(cryptoFeeTotal)} ${offer.token}</span></div>
       <div class="fee-row total"><span>Recibirás</span><span>${fmtC(cryptoNet)} ${offer.token}</span></div>`;
   } else {
     const fmtC = n => n.toLocaleString('es-CU', {maximumFractionDigits:6});
-    const cryptoFee = qty * FEE_RATE;
-    const cryptoNet = qty - cryptoFee;
+    const cryptoFeeVar = qty * FEE_RATE;
+    const cryptoFeeTotal = cryptoFeeVar + FEE_FIXED_VENDEDOR + FEE_RETIRO_VENDEDOR;
+    const cryptoNet = qty - cryptoFeeTotal;
     const gross = qty * price;
     currentOrder.total = cryptoNet;
     document.getElementById('orderTotalFiat').textContent = `${fmtC(cryptoNet)} ${offer.token}`;
     breakdownEl.innerHTML = `
       <div class="fee-row"><span>${qty} ${offer.token} solicitados</span><span></span></div>
-      <div class="fee-row"><span>Tu comisión (1%, en ${offer.token})</span><span>− ${fmtC(cryptoFee)} ${offer.token}</span></div>
+      <div class="fee-row"><span>Tu comisión variable (1%, en ${offer.token})</span><span>− ${fmtC(cryptoFeeVar)} ${offer.token}</span></div>
+      <div class="fee-row"><span>Comisión fija por operación</span><span>− ${fmtC(FEE_FIXED_VENDEDOR)} ${offer.token}</span></div>
+      <div class="fee-row"><span>Comisión de retiro</span><span>− ${fmtC(FEE_RETIRO_VENDEDOR)} ${offer.token}</span></div>
       <div class="fee-row total"><span>Cripto a enviar</span><span>${fmtC(cryptoNet)} ${offer.token}</span></div>
-      <div class="fee-row" style="border-top:1px solid var(--line); margin-top:6px; padding-top:8px;"><span>El comprador te transferirá</span><span>${fmt(gross)} ${offer.cur}</span></div>`;
+      <div class="fee-row" style="border-top:1px solid var(--line); margin-top:6px; padding-top:8px;"><span>El comprador te transferirá (más sus propias comisiones)</span><span>${fmt(gross)} ${offer.cur}</span></div>`;
   }
   updateConfirmAvailability();
 }
@@ -1679,13 +1693,14 @@ function openTransferModal(idx){
   }
   document.getElementById('transferQtyHint').textContent = (() => {
     const qtyNum = parseNum(o.qty);
-    const fee = qtyNum * FEE_RATE;
-    const net = qtyNum - fee;
+    const feeVar = qtyNum * FEE_RATE;
+    const feeTotal = feeVar + FEE_FIXED_VENDEDOR + FEE_RETIRO_VENDEDOR;
+    const net = qtyNum - feeTotal;
     const fmtC = n => n.toLocaleString('es-CU', {maximumFractionDigits:6});
-    return `Cantidad a enviar: ${fmtC(net)} ${o.token} (${o.red}) — ya descontada tu comisión del 1% (${fmtC(fee)} ${o.token}) sobre los ${o.qty} ${o.token} de la orden`;
+    return `Cantidad a enviar: ${fmtC(net)} ${o.token} (${o.red}) — de los ${o.qty} ${o.token} de la orden, ya descontamos tu 1% variable + ${FEE_FIXED_VENDEDOR} fija + ${FEE_RETIRO_VENDEDOR} de retiro (total: ${fmtC(feeTotal)} ${o.token})`;
   })();
   document.getElementById('transferPaidHint').textContent = o.total
-    ? `El comprador pagó: ${o.total} ${o.cur || 'CUP'} (incluye 1% de comisión de la plataforma) — esto no cambia lo que envías, envías el total en cripto`
+    ? `El comprador pagó: ${o.total} ${o.cur || 'CUP'} (incluye su comisión variable 1% + fija ${FEE_FIXED_COMPRADOR} + retiro ${FEE_RETIRO_COMPRADOR} CUP) — esto no afecta lo que tú envías`
     : 'El comprador pagó: revisa el monto con el operario';
 
   document.getElementById('transferProofInput').value = '';
