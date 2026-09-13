@@ -1243,22 +1243,31 @@ function updateOrderTotal(){
     const subtotal = qty * price;
     const fee = subtotal * FEE_RATE;
     const total = subtotal + fee;
+    const fmtC = n => n.toLocaleString('es-CU', {maximumFractionDigits:6});
+    const cryptoFee = qty * FEE_RATE;
+    const cryptoNet = qty - cryptoFee;
     currentOrder.total = total;
+    currentOrder.cryptoNet = cryptoNet;
     document.getElementById('orderTotalFiat').textContent = `${fmt(total)} ${offer.cur}`;
     breakdownEl.innerHTML = `
       <div class="fee-row"><span>${qty} ${offer.token} × ${price} ${offer.cur}</span><span>${fmt(subtotal)} ${offer.cur}</span></div>
-      <div class="fee-row"><span>Comisión de la plataforma (1%)</span><span>+ ${fmt(fee)} ${offer.cur}</span></div>
-      <div class="fee-row total"><span>Total a transferir</span><span>${fmt(total)} ${offer.cur}</span></div>`;
+      <div class="fee-row"><span>Tu comisión (1%, en ${offer.cur})</span><span>+ ${fmt(fee)} ${offer.cur}</span></div>
+      <div class="fee-row total"><span>Total a transferir</span><span>${fmt(total)} ${offer.cur}</span></div>
+      <div class="fee-row" style="border-top:1px solid var(--line); margin-top:6px; padding-top:8px;"><span>Cripto que ordenas</span><span>${qty} ${offer.token}</span></div>
+      <div class="fee-row"><span>Comisión del vendedor (1%, en ${offer.token})</span><span>− ${fmtC(cryptoFee)} ${offer.token}</span></div>
+      <div class="fee-row total"><span>Recibirás</span><span>${fmtC(cryptoNet)} ${offer.token}</span></div>`;
   } else {
+    const fmtC = n => n.toLocaleString('es-CU', {maximumFractionDigits:6});
+    const cryptoFee = qty * FEE_RATE;
+    const cryptoNet = qty - cryptoFee;
     const gross = qty * price;
-    const fee = gross * FEE_RATE;
-    const net = gross - fee;
-    currentOrder.total = net;
-    document.getElementById('orderTotalFiat').textContent = `${qty} ${offer.token}`;
+    currentOrder.total = cryptoNet;
+    document.getElementById('orderTotalFiat').textContent = `${fmtC(cryptoNet)} ${offer.token}`;
     breakdownEl.innerHTML = `
-      <div class="fee-row"><span>${qty} ${offer.token} × ${price} ${offer.cur}</span><span>${fmt(gross)} ${offer.cur}</span></div>
-      <div class="fee-row"><span>Comisión de la plataforma (1%)</span><span>− ${fmt(fee)} ${offer.cur}</span></div>
-      <div class="fee-row total"><span>Recibirás</span><span>${fmt(net)} ${offer.cur}</span></div>`;
+      <div class="fee-row"><span>${qty} ${offer.token} solicitados</span><span></span></div>
+      <div class="fee-row"><span>Tu comisión (1%, en ${offer.token})</span><span>− ${fmtC(cryptoFee)} ${offer.token}</span></div>
+      <div class="fee-row total"><span>Cripto a enviar</span><span>${fmtC(cryptoNet)} ${offer.token}</span></div>
+      <div class="fee-row" style="border-top:1px solid var(--line); margin-top:6px; padding-top:8px;"><span>El comprador te transferirá</span><span>${fmt(gross)} ${offer.cur}</span></div>`;
   }
   updateConfirmAvailability();
 }
@@ -1668,7 +1677,13 @@ function openTransferModal(idx){
     destLabel.textContent = 'Destino';
     destValue.textContent = 'No se registró destino — consulta con el operario antes de enviar';
   }
-  document.getElementById('transferQtyHint').textContent = `Cantidad a enviar: ${o.qty} ${o.token} (${o.red})`;
+  document.getElementById('transferQtyHint').textContent = (() => {
+    const qtyNum = parseNum(o.qty);
+    const fee = qtyNum * FEE_RATE;
+    const net = qtyNum - fee;
+    const fmtC = n => n.toLocaleString('es-CU', {maximumFractionDigits:6});
+    return `Cantidad a enviar: ${fmtC(net)} ${o.token} (${o.red}) — ya descontada tu comisión del 1% (${fmtC(fee)} ${o.token}) sobre los ${o.qty} ${o.token} de la orden`;
+  })();
   document.getElementById('transferPaidHint').textContent = o.total
     ? `El comprador pagó: ${o.total} ${o.cur || 'CUP'} (incluye 1% de comisión de la plataforma) — esto no cambia lo que envías, envías el total en cripto`
     : 'El comprador pagó: revisa el monto con el operario';
