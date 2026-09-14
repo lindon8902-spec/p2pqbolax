@@ -428,14 +428,14 @@
         <div class="panel-avatar" id="panelAvatar">?</div>
         <div>
           <div class="panel-alias" id="panelAlias">@tu_alias</div>
-          <div class="panel-stars">☆☆☆☆☆ <span>0.0 · 0 operaciones</span></div>
+          <div class="panel-stars" id="panelStarsLine">☆☆☆☆☆ <span>0.0 · 0 operaciones</span></div>
         </div>
       </div>
 
       <div class="panel-stat-grid">
-        <div class="panel-stat"><div class="n">0</div><div class="l">órdenes activas</div></div>
-        <div class="panel-stat"><div class="n">0</div><div class="l">completadas</div></div>
-        <div class="panel-stat"><div class="n">0</div><div class="l">ofertas publicadas</div></div>
+        <div class="panel-stat"><div class="n" id="panelStatActivas">0</div><div class="l">órdenes activas</div></div>
+        <div class="panel-stat"><div class="n" id="panelStatCompletadas">0</div><div class="l">completadas</div></div>
+        <div class="panel-stat"><div class="n" id="panelStatOfertas">0</div><div class="l">ofertas publicadas</div></div>
       </div>
 
       <div class="panel-quick">
@@ -628,15 +628,19 @@
         <div class="profile-head">
           <div class="avatar" id="perfilAvatar">?</div>
           <div class="alias" id="aliasDisplay">@tu_alias</div>
-          <div class="stars">☆☆☆☆☆<span class="score">0.0 · 0 operaciones</span></div>
+          <div class="stars" id="perfilStarsLine">☆☆☆☆☆<span class="score">0.0 · 0 operaciones</span></div>
           <div class="sello" id="perfilSello" style="margin-top:14px; display:none;"><div class="sello-text">Identidad<br>verificada<br>✓</div></div>
         </div>
         <div class="stat-grid">
-          <div class="stat"><div class="n">—</div><div class="l">operaciones completadas</div></div>
+          <div class="stat"><div class="n" id="perfilOpsCompletadas">—</div><div class="l">operaciones completadas</div></div>
           <div class="stat"><div class="n">—</div><div class="l">tiempo de respuesta prom.</div></div>
-          <div class="stat"><div class="n">0</div><div class="l">operaciones totales</div></div>
+          <div class="stat"><div class="n" id="perfilOpsTotales">0</div><div class="l">operaciones totales</div></div>
           <div class="stat"><div class="n" id="perfilMiembroDesde">—</div><div class="l">miembro desde</div></div>
         </div>
+      </div>
+      <div class="card">
+        <div class="eyebrow" style="margin-bottom:12px;">Historial de operaciones (visible para la contraparte)</div>
+        <div id="perfilHistorialPublico"><div class="panel-empty">Aún no tienes operaciones completadas</div></div>
       </div>
       <div class="card">
         <div class="eyebrow" style="margin-bottom:12px;">Qué ve la contraparte</div>
@@ -863,6 +867,31 @@ function jsq(s){ return String(s ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'"
 // Normaliza cualquier alias a minúsculas antes de guardarlo o compararlo — evita que
 // "@Yo", "@yo" y "@YO" se traten como personas distintas en la base de datos.
 function normAlias(a){ return String(a ?? '').trim().toLowerCase(); }
+
+// Cuenta las operaciones reales (completadas y totales) de un alias, consultando
+// directamente la tabla orders — usado para el historial público (mercado, panel,
+// perfil público), que antes siempre mostraba "0 operaciones" fijo sin consultar nada.
+const aliasStatsCache = {};
+async function fetchAliasStats(alias){
+  const key = normAlias(alias);
+  if(!key) return { total: 0, completadas: 0 };
+  if(aliasStatsCache[key]) return aliasStatsCache[key];
+  try{
+    const { data, error } = await supabaseClient
+      .from('orders')
+      .select('status')
+      .or(`comprador.eq.@${key},vendedor.eq.@${key}`);
+    if(error) throw error;
+    const total = (data || []).length;
+    const completadas = (data || []).filter(o => o.status === 'completada').length;
+    const stats = { total, completadas };
+    aliasStatsCache[key] = stats;
+    return stats;
+  }catch(err){
+    console.log('No se pudieron cargar estadísticas de', alias, err);
+    return { total: 0, completadas: 0 };
+  }
+}
 function parseNum(v){
   let s = String(v ?? '').trim().replace(/\s/g,'');
   if(!s) return NaN;
@@ -1004,10 +1033,27 @@ async function loadMarketOffers(){
       .order('created_at', { ascending: false });
     if(error) throw error;
 
+    // Reputación real: contamos operaciones completadas por alias, para no mostrar
+    // siempre "0 operaciones" en el mercado sin importar el historial del vendedor.
+    const opsCount = {};
+    try{
+      const { data: completedOrders } = await supabaseClient
+        .from('orders')
+        .select('comprador, vendedor')
+        .eq('status', 'completada');
+      (completedOrders || []).forEach(o => {
+        const c = normAlias((o.comprador || '').replace(/^@/, ''));
+        const v = normAlias((o.vendedor || '').replace(/^@/, ''));
+        if(c) opsCount[c] = (opsCount[c] || 0) + 1;
+        if(v) opsCount[v] = (opsCount[v] || 0) + 1;
+      });
+    }catch(e){ /* si falla, todos quedan en 0 operaciones — no bloquea el mercado */ }
+
     sellOffers.length = 0;
     buyOffers.length = 0;
     (data || []).forEach(o => {
-      const item = { id: o.id, alias: o.alias, stars: 0, ops: 0, red: o.red, token: o.token, qty: o.qty, price: o.price, cur: o.cur, pago: o.pago || [] };
+      const ops = opsCount[normAlias(o.alias)] || 0;
+      const item = { id: o.id, alias: o.alias, stars: ops > 0 ? 5 : 0, ops, red: o.red, token: o.token, qty: o.qty, price: o.price, cur: o.cur, pago: o.pago || [] };
       if(o.tipo === 'venta') sellOffers.push(item); else buyOffers.push(item);
     });
   }catch(err){
@@ -1037,7 +1083,63 @@ async function loadMyOffers(){
   }catch(err){
     console.log('No se pudieron cargar tus ofertas:', err);
   }
+  const ofertasEl = document.getElementById('panelStatOfertas');
+  if(ofertasEl) ofertasEl.textContent = panelMyOffersList.length;
   renderPanel();
+}
+
+/* ===== PERFIL PÚBLICO: historial real de operaciones completadas =====
+   La pestaña "Perfil público" llamaba a esta función desde antes, pero nunca
+   había sido escrita — por eso esa pestaña nunca mostraba datos reales. */
+async function loadPublicProfileStats(){
+  const alias = normAlias((document.getElementById('aliasInput') || {}).value);
+  const listEl = document.getElementById('perfilHistorialPublico');
+  if(!alias){
+    if(listEl) listEl.innerHTML = '<div class="panel-empty">Inicia sesión para ver tu historial</div>';
+    return;
+  }
+  try{
+    const { data, error } = await supabaseClient
+      .from('orders')
+      .select('order_code, red, token, qty, comprador, vendedor, status, created_at')
+      .or(`comprador.eq.@${alias},vendedor.eq.@${alias}`)
+      .in('status', ['completada', 'rechazada'])
+      .order('created_at', { ascending: false })
+      .limit(30);
+    if(error) throw error;
+
+    const items = data || [];
+    const completadas = items.filter(o => o.status === 'completada');
+    document.getElementById('perfilOpsCompletadas').textContent = completadas.length;
+    document.getElementById('perfilOpsTotales').textContent = items.length;
+
+    const starsLine = document.getElementById('perfilStarsLine');
+    if(starsLine){
+      const stars = completadas.length > 0 ? '★★★★★' : '☆☆☆☆☆';
+      starsLine.innerHTML = `${stars}<span class="score">${completadas.length > 0 ? '5.0' : '0.0'} · ${completadas.length} operaciones</span>`;
+    }
+
+    if(!listEl) return;
+    if(!items.length){
+      listEl.innerHTML = '<div class="panel-empty">Aún no tienes operaciones completadas</div>';
+      return;
+    }
+    listEl.innerHTML = items.map(o => {
+      const soyComprador = o.comprador === '@'+alias;
+      const rol = soyComprador ? 'Compraste' : 'Vendiste';
+      const contraparte = soyComprador ? o.vendedor : o.comprador;
+      const badge = o.status === 'completada'
+        ? '<span class="panel-item-badge badge-ok">completada</span>'
+        : '<span class="panel-item-badge" style="background:var(--red-bg); color:var(--red);">rechazada</span>';
+      return `<div class="panel-item">
+        <div class="panel-item-left"><div class="panel-item-title">${rol} ${esc(o.qty)} ${esc(o.token)} (${esc(o.red)})</div><div class="panel-item-sub">con ${esc(contraparte)} · ${new Date(o.created_at).toLocaleDateString('es-CU')}</div></div>
+        ${badge}
+      </div>`;
+    }).join('');
+  }catch(err){
+    console.log('No se pudo cargar el historial público:', err);
+    if(listEl) listEl.innerHTML = '<div class="panel-empty">No se pudo cargar el historial</div>';
+  }
 }
 
 /* ===== MODAL DE ORDEN: monto + destino de transferencia ===== */
@@ -1377,6 +1479,9 @@ function switchAccTab(name){
     loadPanelOrders();
     loadMyOffers();
   }
+  if(name === 'perfil'){
+    loadPublicProfileStats();
+  }
   // El panel de Admin nunca se recuerda entre recargas — hay que volver a ingresar la clave por seguridad.
   if(name !== 'admin'){
     try{ localStorage.setItem('qbolax_last_tab', name); }catch(e){}
@@ -1634,6 +1739,14 @@ async function loadPanelOrders(){
   }catch(err){
     console.log('No se pudieron cargar tus órdenes:', err);
   }
+
+  // Estadísticas reales para la cabecera del panel — antes mostraba "0 operaciones" fijo.
+  delete aliasStatsCache[alias];
+  const stats = await fetchAliasStats(alias);
+  document.getElementById('panelStatActivas').textContent = panelActiveOrders.length;
+  document.getElementById('panelStatCompletadas').textContent = stats.completadas;
+  document.getElementById('panelStarsLine').innerHTML = `☆☆☆☆☆ <span>0.0 · ${stats.completadas} operaciones</span>`;
+
   renderPanel();
 }
 
@@ -1946,47 +2059,37 @@ async function handleRegister(){
   btn.disabled = true;
   btn.textContent = 'Creando cuenta...';
 
-  // Si el registro en Supabase falla de verdad (no solo un error de red pasajero),
-  // NO avanzamos — de lo contrario la app actúa como si la cuenta existiera y al
-  // recargar la página no hay nada que restaurar (por eso pedía registrarse otra vez).
+  // El registro completo (crear el usuario + su perfil) ahora lo hace el backend
+  // en un solo paso, con la clave de administrador — antes el navegador hacía
+  // signUp() y luego un insert por separado, y si el proyecto exigía confirmar
+  // el correo (imposible para los correos internos @qbolax.local que usamos aquí),
+  // el usuario quedaba huérfano en Auth sin perfil, bloqueando ese alias para
+  // siempre. El backend crea el usuario ya confirmado y deshace todo si algo falla.
   try{
-    // Comprobamos primero que el alias no esté en uso — antes dos personas podían
-    // registrarse con el mismo alias (contactos distintos) y el login por alias
-    // quedaba ambiguo o traía el perfil equivocado.
-    const { data: existing, error: existingErr } = await supabaseClient
-      .from('profiles')
-      .select('alias')
-      .eq('alias', alias)
-      .maybeSingle();
-    if(existingErr) throw existingErr;
-    if(existing){
-      throw new Error('Ese alias ya está en uso — elige otro.');
-    }
-
-    // Cerramos cualquier sesión anterior guardada en el navegador — si no, signUp
-    // se puede enganchar a esa sesión vieja en vez de crear un usuario nuevo de verdad,
-    // y el perfil choca con el id de la cuenta anterior.
     await supabaseClient.auth.signOut().catch(()=>{});
 
-    const { data, error } = await supabaseClient.auth.signUp({
-      email: contact.includes('@') ? contact : `${alias}@qbolax.local`,
-      password: password
+    const res = await fetch(SUPABASE_FUNCTION_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain'},
+      body: JSON.stringify({ action: 'register_account', alias, contact, password })
     });
-    if(error) throw error;
+    const data = await res.json();
+    if(!data.ok) throw new Error(data.error || 'El servidor rechazó el registro');
 
-    const { error: profileError } = await supabaseClient.from('profiles').upsert([{
-      id: data.user ? data.user.id : null,
-      alias: alias,
-      contact: contact
-    }], { onConflict: 'id' });
-    if(profileError) throw profileError;
+    // La cuenta ya existe y está confirmada en el servidor — ahora sí iniciamos
+    // sesión desde el navegador para que el resto de la app (KYC, ofertas, etc.)
+    // tenga un auth.uid() real y las políticas RLS basadas en sesión funcionen.
+    const { error: signInError } = await supabaseClient.auth.signInWithPassword({
+      email: data.email, password
+    });
+    if(signInError) throw signInError;
 
     contractAccepted = true;
     saveFlags();
     showToast('Cuenta creada — ahora verifica tu identidad');
     switchAccTab('kyc');
   }catch(err){
-    console.log('Supabase signUp falló:', err);
+    console.log('El registro falló:', err);
     errorEl.textContent = 'No se pudo crear la cuenta: ' + err.message;
     errorEl.style.display = 'block';
     showToast('No se pudo crear la cuenta — revisa el detalle abajo del botón');
