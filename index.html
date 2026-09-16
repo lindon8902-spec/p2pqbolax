@@ -305,7 +305,7 @@
         <div class="trust-row">
           <div class="trust-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Fondos en custodia</div>
           <div class="trust-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>Identidad verificada</div>
-          <div class="trust-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M4 6h16M4 18h16"/></svg>4 redes soportadas</div>
+          <div class="trust-item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M4 6h16M4 18h16"/></svg>5 redes soportadas</div>
         </div>
       </div>
       <div class="ticker-card">
@@ -358,12 +358,13 @@
 
   <section class="section" id="redes">
     <div class="wrap">
-      <div class="section-head"><div class="eyebrow">Redes soportadas</div><h2 class="section-title">Multi-red desde el diseño</h2><p>Empezamos con estas cuatro; el sistema está pensado para sumar más sin rehacer nada.</p></div>
+      <div class="section-head"><div class="eyebrow">Redes soportadas</div><h2 class="section-title">Multi-red desde el diseño</h2><p>Empezamos con estas cinco; el sistema está pensado para sumar más sin rehacer nada.</p></div>
       <div class="net-strip">
         <div class="net-pill"><span class="dotc" style="background:#E4482E;"></span><span class="name">TRON</span><span class="sub">USDT · TRX</span></div>
         <div class="net-pill"><span class="dotc" style="background:#F7931A;"></span><span class="name">Bitcoin</span><span class="sub">BTC</span></div>
         <div class="net-pill"><span class="dotc" style="background:#627EEA;"></span><span class="name">Ethereum</span><span class="sub">USDT · ETH</span></div>
         <div class="net-pill"><span class="dotc" style="background:#0098EA;"></span><span class="name">TON</span><span class="sub">TON · USDT</span></div>
+        <div class="net-pill"><span class="dotc" style="background:#F0B90B;"></span><span class="name">BSC</span><span class="sub">USDT · BNB</span></div>
       </div>
     </div>
   </section>
@@ -401,10 +402,10 @@
     </div>
     <div class="filters">
       <select id="fRed" onchange="applyFilters()">
-        <option value="">Todas las redes</option><option value="TRON">TRON</option><option value="BTC">Bitcoin</option><option value="ETH">Ethereum</option><option value="TON">TON</option>
+        <option value="">Todas las redes</option><option value="TRON">TRON</option><option value="BTC">Bitcoin</option><option value="ETH">Ethereum</option><option value="TON">TON</option><option value="BSC">BSC (BEP20)</option>
       </select>
       <select id="fToken" onchange="applyFilters()">
-        <option value="">Todos los tokens</option><option>USDT</option><option>TRX</option><option>BTC</option><option>ETH</option><option>TON</option>
+        <option value="">Todos los tokens</option><option>USDT</option><option>TRX</option><option>BTC</option><option>ETH</option><option>TON</option><option>BNB</option>
       </select>
       <select id="fPago" onchange="applyFilters()">
         <option value="">Todo método de pago</option><option>Transferencia</option><option>Efectivo</option><option>MLC</option>
@@ -684,7 +685,7 @@
           <div class="eyebrow" style="margin-bottom:12px;">Publicar oferta de venta</div>
           <div class="hint" style="margin-bottom:14px;">Se cobra 1% de comisión sobre cada operación completada, a ti y al comprador — se descuenta automáticamente al liberar los fondos.</div>
           <label>Red</label>
-          <select id="redSelect" onchange="updateTokens()"><option value="TRON">TRON</option><option value="BTC">Bitcoin</option><option value="ETH">Ethereum</option><option value="TON">TON</option></select>
+          <select id="redSelect" onchange="updateTokens()"><option value="TRON">TRON</option><option value="BTC">Bitcoin</option><option value="ETH">Ethereum</option><option value="TON">TON</option><option value="BSC">BSC (BEP20)</option></select>
           <label>Token</label><select id="tokenSelect"></select>
           <label>Cantidad a vender</label><input type="text" id="sellQtyInput" placeholder="ej. 100">
           <label>Precio por unidad (CUP)</label><input type="text" id="sellPriceInput" placeholder="ej. 887">
@@ -1159,6 +1160,7 @@ const ESCROW = {
     BTC: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
     ETH: '0xAb5801a7D398351b8bE11C439e05C5B3259aeC9',
     TON: 'EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4H86ojlnODwZ',
+    BSC: '0xAb5801a7D398351b8bE11C439e05C5B3259aeC9', // ⚠️ placeholder — reemplázala por tu wallet BSC real antes de operar
   }
 };
 let currentOrder = null;
@@ -1833,12 +1835,12 @@ function openTransferModal(idx){
 
   // Solo exigimos el TXID cuando de verdad lo vamos a poder verificar (TRON/USDT);
   // para otras redes, por ahora, el operario revisa manualmente.
-  const soportaVerificacion = String(o.red).toUpperCase() === 'TRON' && String(o.token).toUpperCase().includes('USDT');
+  const soportaVerificacion = ['TRON','BSC'].includes(String(o.red).toUpperCase()) && String(o.token).toUpperCase().includes('USDT');
   document.getElementById('transferTxidLabel').textContent = soportaVerificacion
     ? 'Hash de la transacción (TXID) — obligatorio'
     : 'Hash de la transacción (TXID) — opcional para esta red';
   document.getElementById('transferTxidHint').textContent = soportaVerificacion
-    ? 'Lo verificamos directo en la blockchain de TRON antes de aceptar tu envío — una captura sola ya no es suficiente (evita estafas tipo "Flash USDT").'
+    ? `Lo verificamos directo en la blockchain de ${o.red === 'BSC' ? 'Binance Smart Chain' : 'TRON'} antes de aceptar tu envío — una captura sola ya no es suficiente (evita estafas tipo "Flash USDT").`
     : 'Esta red todavía no tiene verificación automática — el operario revisará tu comprobante a mano.';
 
   const btn = document.getElementById('transferConfirmBtn');
@@ -1876,7 +1878,7 @@ async function handleTransferProofUpload(input){
 }
 function updateTransferConfirmAvailability(){
   if(!currentTransferOrder) return;
-  const soportaVerificacion = String(currentTransferOrder.red).toUpperCase() === 'TRON' && String(currentTransferOrder.token).toUpperCase().includes('USDT');
+  const soportaVerificacion = ['TRON','BSC'].includes(String(currentTransferOrder.red).toUpperCase()) && String(currentTransferOrder.token).toUpperCase().includes('USDT');
   const txid = (document.getElementById('transferTxidInput').value || '').trim();
   const hasTxid = !soportaVerificacion || txid.length > 0; // obligatorio solo si la red lo soporta
   document.getElementById('transferConfirmBtn').disabled = !(transferProofFile && hasTxid);
@@ -2623,7 +2625,7 @@ function pickRole(role){
   document.getElementById('roleFormComprador').style.display = role==='comprador' ? 'block' : 'none';
   if(role==='vendedor') updateTokens();
 }
-const TOKENS_BY_NETWORK = { TRON: ['USDT (TRC20)', 'TRX'], BTC: ['BTC'], ETH: ['USDT (ERC20)', 'ETH'], TON: ['TON', 'USDT (TON)'] };
+const TOKENS_BY_NETWORK = { TRON: ['USDT (TRC20)', 'TRX'], BTC: ['BTC'], ETH: ['USDT (ERC20)', 'ETH'], TON: ['TON', 'USDT (TON)'], BSC: ['USDT (BEP20)', 'BNB'] };
 function updateTokens(){
   const red = document.getElementById('redSelect').value;
   document.getElementById('tokenSelect').innerHTML = TOKENS_BY_NETWORK[red].map(t=>`<option>${t}</option>`).join('');
