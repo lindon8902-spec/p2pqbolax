@@ -281,6 +281,7 @@
     <div class="nav-links">
       <div class="nl active" id="navInicio" onclick="goTo('inicio')"><span class="label">Inicio</span></div>
       <div class="nl" id="navMercado" onclick="goTo('mercado')"><span class="label">Mercado</span></div>
+      <div class="nl" id="navAuditoria" onclick="goTo('auditoria')"><span class="label">Auditoría</span></div>
       <div class="nl" id="navCuenta" onclick="goTo('cuenta')"><span class="label">Mi cuenta</span></div>
     </div>
     <div class="nav-cta">
@@ -408,11 +409,55 @@
         <option value="">Todos los tokens</option><option>USDT</option><option>TRX</option><option>BTC</option><option>ETH</option><option>TON</option><option>BNB</option>
       </select>
       <select id="fPago" onchange="applyFilters()">
-        <option value="">Todo método de pago</option><option>Transferencia</option><option>Efectivo</option><option>MLC</option>
+        <option value="">Todo método de pago</option><option>Transferencia</option><option>MLC</option>
       </select>
     </div>
     <div id="offerList"></div>
     <div class="empty-state" id="emptyState" style="display:none;">No hay ofertas que coincidan con tus filtros.</div>
+  </div>
+</div>
+
+<!-- ============ PÁGINA: AUDITORÍA PÚBLICA ============ -->
+<div class="page" id="page-auditoria">
+  <div class="wrap">
+    <div class="m-header"><h1>Auditoría pública</h1><div class="sub">Transparencia total: a dónde va cada transferencia, y el registro de operaciones completadas.</div></div>
+
+    <section class="section" style="padding:24px 0 0;">
+      <div class="section-head" style="margin-bottom:18px;">
+        <div class="eyebrow">A dónde llegan las transferencias</div>
+        <h2 class="section-title" style="font-size:20px;">Cuentas de custodia</h2>
+        <p>Estas son las únicas cuentas de la plataforma. Nunca transfieras a una dirección o cuenta distinta a las de aquí abajo.</p>
+      </div>
+      <div class="card" style="margin-bottom:10px;">
+        <div class="eyebrow" style="margin-bottom:10px;">Fiat (CUP)</div>
+        <div class="privacy-row"><span class="l">Titular</span><span class="v" style="font-family:'IBM Plex Mono',monospace; font-size:12px;" id="auditFiatTitular">—</span></div>
+        <div class="privacy-row"><span class="l">Banco</span><span class="v" style="font-family:'IBM Plex Mono',monospace; font-size:12px;" id="auditFiatBanco">—</span></div>
+        <div class="privacy-row"><span class="l">Cuenta</span><span class="v" style="font-family:'IBM Plex Mono',monospace; font-size:12px;" id="auditFiatCuenta">—</span></div>
+      </div>
+      <div class="card" id="auditWalletsCard">
+        <div class="eyebrow" style="margin-bottom:10px;">Wallets cripto por red</div>
+        <div id="auditWalletsList"></div>
+      </div>
+    </section>
+
+    <section class="section" style="padding:32px 0 0;">
+      <div class="section-head" style="margin-bottom:14px;">
+        <div class="eyebrow">Reputación real</div>
+        <h2 class="section-title" style="font-size:20px;">Usuarios más activos</h2>
+      </div>
+      <div id="auditTopUsers"></div>
+    </section>
+
+    <section class="section" style="padding:32px 0 60px;">
+      <div class="section-head" style="margin-bottom:14px;">
+        <div class="eyebrow">Registro de operaciones</div>
+        <h2 class="section-title" style="font-size:20px;">Transferencias completadas</h2>
+        <p>Monto operado y comisión pagada en cada lado — calculada con la tarifa vigente de la plataforma.</p>
+      </div>
+      <button class="btn-outline" style="margin-top:0; margin-bottom:14px;" onclick="loadAuditData()">↻ Actualizar</button>
+      <div id="auditTxList"></div>
+      <div class="panel-empty" id="auditEmpty" style="display:none;">Aún no hay operaciones completadas.</div>
+    </section>
   </div>
 </div>
 
@@ -690,7 +735,7 @@
           <label>Cantidad a vender</label><input type="text" id="sellQtyInput" placeholder="ej. 100">
           <label>Precio por unidad (CUP)</label><input type="text" id="sellPriceInput" placeholder="ej. 887">
           <label>Método de pago</label>
-          <select id="sellPagoSelect"><option>Transferencia</option><option>Efectivo</option><option>MLC</option></select>
+          <select id="sellPagoSelect"><option>Transferencia</option><option>MLC</option></select>
           <button class="btn btn-primary btn-full" onclick="publishOffer()">Publicar oferta</button>
           <button class="btn-outline" onclick="goTo('mercado'); setSide('sell')">Ver quién quiere comprar ahora</button>
         </div>
@@ -865,10 +910,12 @@ function goTo(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.id==='page-'+page));
   document.getElementById('navInicio').classList.toggle('active', page==='inicio');
   document.getElementById('navMercado').classList.toggle('active', page==='mercado');
+  document.getElementById('navAuditoria').classList.toggle('active', page==='auditoria');
   document.getElementById('navCuenta').classList.toggle('active', page==='cuenta');
   window.scrollTo({top:0, behavior:'instant'});
   try{ localStorage.setItem('qbolax_last_page', page); }catch(e){}
   if(page === 'mercado' && typeof loadMarketOffers === 'function') loadMarketOffers();
+  if(page === 'auditoria' && typeof loadAuditData === 'function') loadAuditData();
 }
 
 /* ===== Utilidades: escape + parsing seguro ===== */
@@ -1075,7 +1122,79 @@ async function loadMarketOffers(){
 }
 loadMarketOffers();
 
-/* ===== PANEL: mis propias ofertas publicadas (antes nunca se llenaba) ===== */
+/* ===== AUDITORÍA PÚBLICA: cuentas de custodia, transacciones y ranking ===== */
+function renderEscrowDisplay(){
+  document.getElementById('auditFiatTitular').textContent = ESCROW.fiat.titular;
+  document.getElementById('auditFiatBanco').textContent = ESCROW.fiat.banco;
+  document.getElementById('auditFiatCuenta').textContent = ESCROW.fiat.cuenta;
+  const list = document.getElementById('auditWalletsList');
+  list.innerHTML = Object.entries(ESCROW.wallets).map(([red, addr]) => `
+    <div class="privacy-row" style="align-items:flex-start;">
+      <span class="l" style="flex:none; padding-top:2px;">${esc(red)}</span>
+      <span class="v" style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; text-align:right; word-break:break-all; max-width:70%;">${esc(addr)}</span>
+    </div>`).join('');
+}
+
+function fmtNum(n){ return Number(n).toLocaleString('es-CU', {maximumFractionDigits:6}); }
+
+async function loadAuditData(){
+  renderEscrowDisplay();
+  const txEl = document.getElementById('auditTxList');
+  const emptyEl = document.getElementById('auditEmpty');
+  const topEl = document.getElementById('auditTopUsers');
+  try{
+    const { data, error } = await supabaseClient
+      .from('orders')
+      .select('order_code, red, token, qty, price, total, cur, comprador, vendedor, created_at')
+      .eq('status', 'completada')
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if(error) throw error;
+
+    const orders = data || [];
+    emptyEl.style.display = orders.length === 0 ? 'block' : 'none';
+
+    // Comisión de cada lado, recalculada con la tarifa vigente (variable + fija + retiro).
+    // Nota: si la tarifa cambió desde que se hizo una orden vieja, esto muestra la
+    // comisión de HOY aplicada a ese monto, no necesariamente la que se cobró en su momento.
+    txEl.innerHTML = orders.map(o=>{
+      const qty = parseNum(o.qty), price = parseNum(o.price), total = parseNum(o.total);
+      const subtotal = qty * price;
+      const comisionComprador = total - subtotal;
+      const comisionVendedor = qty*FEE_RATE + FEE_FIXED_VENDEDOR + FEE_RETIRO_VENDEDOR;
+      const fecha = o.created_at ? new Date(o.created_at).toLocaleString('es-CU', {dateStyle:'medium', timeStyle:'short'}) : '';
+      return `<div class="panel-item" style="align-items:flex-start; flex-direction:column; gap:6px;">
+        <div style="display:flex; justify-content:space-between; width:100%;">
+          <div class="panel-item-title">${esc(o.order_code)} · ${esc(o.qty)} ${esc(o.token)} · ${esc(o.red)}</div>
+          <span class="panel-item-badge badge-ok">completada</span>
+        </div>
+        <div class="panel-item-sub">${esc(o.comprador)} ↔ ${esc(o.vendedor)} · ${esc(fecha)}</div>
+        <div class="panel-item-sub">Comprador pagó ${fmtNum(total)} ${esc(o.cur)} (comisión ≈ ${fmtNum(comisionComprador)} ${esc(o.cur)}) · Vendedor pagó ≈ ${fmtNum(comisionVendedor)} ${esc(o.token)} de comisión</div>
+      </div>`;
+    }).join('');
+
+    // Ranking de usuarios más activos por operaciones completadas (comprador o vendedor).
+    const counts = {};
+    orders.forEach(o=>{
+      [o.comprador, o.vendedor].forEach(alias=>{
+        if(!alias) return;
+        counts[alias] = (counts[alias]||0) + 1;
+      });
+    });
+    const ranking = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    topEl.innerHTML = ranking.length ? ranking.map(([alias, n], idx)=>`
+      <div class="panel-item">
+        <div class="panel-item-left"><div class="panel-item-title">#${idx+1} · ${esc(alias)}</div></div>
+        <span class="panel-item-badge badge-live">${n} operaci${n===1?'ón':'ones'}</span>
+      </div>`).join('') : '<div class="panel-empty">Aún no hay suficientes operaciones para un ranking</div>';
+  }catch(err){
+    txEl.innerHTML = '';
+    emptyEl.textContent = 'No se pudo cargar la auditoría: ' + err.message;
+    emptyEl.style.display = 'block';
+    topEl.innerHTML = '';
+    console.log('Error cargando auditoría pública:', err);
+  }
+}
 const panelMyOffersList = [];
 async function loadMyOffers(){
   const alias = normAlias((document.getElementById('aliasInput') || {}).value);
